@@ -7,7 +7,7 @@ class PDFViewer {
         this.totalPages = 0;
         this.swiper = null;
         this.scale = 1.5;
-        this.pdfUrl = '1.pdf';
+        this.pdfUrl = 'https://github.com/DUT-2025-tuanxue/DUT-2025-tuanxue.github.io/blob/main/1.pdf';
         this.renderedPages = new Set(); // 记录已渲染的页面
         this.renderingPages = new Set(); // 记录正在渲染的页面
         
