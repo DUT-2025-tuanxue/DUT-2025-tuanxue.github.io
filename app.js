@@ -8,6 +8,8 @@ class PDFViewer {
         this.swiper = null;
         this.scale = 1.5;
         this.pdfUrl = '1.pdf';
+        this.renderedPages = new Set(); // 记录已渲染的页面
+        this.renderingPages = new Set(); // 记录正在渲染的页面
         
         this.init();
     }
@@ -32,19 +34,50 @@ class PDFViewer {
         document.getElementById('totalPages').textContent = this.totalPages;
         document.getElementById('pageJumpInput').max = this.totalPages;
         
-        await this.renderAllPages();
+        // 创建所有页面的占位符
+        this.createAllSlides();
+        // 只渲染第一页
+        await this.renderPage(1);
     }
 
-    async renderAllPages() {
+    createAllSlides() {
         const container = document.getElementById('pdfContainer');
         
         for (let pageNum = 1; pageNum <= this.totalPages; pageNum++) {
             const slide = document.createElement('div');
             slide.className = 'swiper-slide';
+            slide.dataset.page = pageNum;
             
             const pageDiv = document.createElement('div');
             pageDiv.className = 'pdf-page';
             pageDiv.id = `page-${pageNum}`;
+            
+            // 添加加载占位符
+            const placeholder = document.createElement('div');
+            placeholder.className = 'page-placeholder';
+            placeholder.innerHTML = `
+                <div class="placeholder-content">
+                    <div class="placeholder-spinner"></div>
+                    <p>正在加载第 ${pageNum} 页...</p>
+                </div>
+            `;
+            
+            pageDiv.appendChild(placeholder);
+            slide.appendChild(pageDiv);
+            container.appendChild(slide);
+        }
+    }
+
+    async renderPage(pageNum) {
+        if (this.renderedPages.has(pageNum) || this.renderingPages.has(pageNum)) {
+            return; // 已渲染或正在渲染
+        }
+
+        this.renderingPages.add(pageNum);
+        
+        try {
+            const pageDiv = document.getElementById(`page-${pageNum}`);
+            const placeholder = pageDiv.querySelector('.page-placeholder');
             
             const canvas = document.createElement('canvas');
             const context = canvas.getContext('2d');
@@ -62,14 +95,35 @@ class PDFViewer {
             
             await page.render(renderContext).promise;
             
+            // 渲染完成后替换占位符
+            pageDiv.removeChild(placeholder);
             pageDiv.appendChild(canvas);
-            slide.appendChild(pageDiv);
-            container.appendChild(slide);
             
+            this.renderedPages.add(pageNum);
+            this.renderingPages.delete(pageNum);
+            
+            // 创建缩略图（仅前10页）
             if (pageNum <= 10) {
                 this.createThumbnail(page, pageNum);
             }
+            
+        } catch (error) {
+            console.error(`渲染第${pageNum}页失败:`, error);
+            this.renderingPages.delete(pageNum);
         }
+    }
+
+    async preloadAdjacentPages(currentPage) {
+        // 预加载前后各2页
+        const pagesToLoad = [];
+        for (let i = Math.max(1, currentPage - 2); i <= Math.min(this.totalPages, currentPage + 2); i++) {
+            if (!this.renderedPages.has(i) && !this.renderingPages.has(i)) {
+                pagesToLoad.push(i);
+            }
+        }
+        
+        // 并行加载这些页面
+        Promise.all(pagesToLoad.map(page => this.renderPage(page)));
     }
 
     async createThumbnail(page, pageNum) {
@@ -135,6 +189,9 @@ class PDFViewer {
                     this.currentPage = this.swiper.activeIndex + 1;
                     this.updatePageInfo();
                     this.updateThumbnails();
+                    // 渲染当前页和预加载相邻页
+                    this.renderPage(this.currentPage);
+                    this.preloadAdjacentPages(this.currentPage);
                 }
             },
             touchRatio: 1,
