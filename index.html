@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>纪念册 - PDF阅览器</title>
+    
+    <!-- PDF.js -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+    
+    <!-- Swiper CSS -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/swiper@10/swiper-bundle.min.css" />
+    
+    <!-- 自定义样式 -->
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <!-- 加载动画 -->
+    <div class="loader" id="loader">
+        <div class="loader-spinner"></div>
+        <p>正在加载纪念册...</p>
+    </div>
+
+    <!-- 主容器 -->
+    <div class="main-container">
+        <!-- 顶部控制栏 -->
+        <div class="control-bar">
+            <div class="control-left">
+                <span class="page-info">
+                    <span id="currentPage">1</span> / <span id="totalPages">0</span>
+                </span>
+            </div>
+            <div class="control-center">
+                <h1 class="title">大连理工大学2025届毕业生团学骨干纪念册</h1>
+            </div>
+            <div class="control-right">
+                <button class="btn-fullscreen" id="fullscreenBtn" title="全屏">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                        <path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"/>
+                    </svg>
+                </button>
+            </div>
+        </div>
+
+        <!-- PDF滑动容器 -->
+        <div class="swiper pdf-swiper">
+            <div class="swiper-wrapper" id="pdfContainer">
+                <!-- PDF页面将动态插入这里 -->
+            </div>
+            
+            <!-- 分页器 -->
+            <div class="swiper-pagination"></div>
+            
+            <!-- 导航按钮 -->
+            <div class="swiper-button-prev"></div>
+            <div class="swiper-button-next"></div>
+        </div>
+
+        <!-- 缩略图导航 -->
+        <div class="thumbnail-nav" id="thumbnailNav">
+            <div class="thumbnail-container" id="thumbnailContainer">
+                <!-- 缩略图将动态插入这里 -->
+            </div>
+        </div>
+
+        <!-- 页面跳转 -->
+        <div class="page-jump">
+            <input type="number" id="pageJumpInput" min="1" placeholder="页码">
+            <button id="pageJumpBtn">跳转</button>
+        </div>
+    </div>
+
+    <!-- Swiper JS -->
+    <script src="https://cdn.jsdelivr.net/npm/swiper@10/swiper-bundle.min.js"></script>
+    
+    <!-- 主脚本 -->
+    <script src="app.js"></script>
+</body>
+</html>
