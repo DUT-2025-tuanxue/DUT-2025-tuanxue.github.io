@@ -303,3 +303,34 @@ body {
 .pdf-page {
     animation: fadeIn 0.5s ease;
 }
+
+/* 页面加载占位符 */
+.page-placeholder {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 600px;
+    background: rgba(255, 255, 255, 0.95);
+    border-radius: 5px;
+}
+
+.placeholder-content {
+    text-align: center;
+    color: #666;
+}
+
+.placeholder-spinner {
+    width: 40px;
+    height: 40px;
+    border: 3px solid rgba(102, 126, 234, 0.3);
+    border-top-color: #667eea;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    margin: 0 auto 15px;
+}
+
+.placeholder-content p {
+    font-size: 16px;
+    margin: 0;
+    opacity: 0.8;
+}
