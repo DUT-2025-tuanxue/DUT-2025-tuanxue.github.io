@@ -334,3 +334,59 @@ body {
     margin: 0;
     opacity: 0.8;
 }
+
+/* 加载进度条 */
+.loading-progress {
+    width: 200px;
+    height: 6px;
+    background: rgba(0, 0, 0, 0.1);
+    border-radius: 3px;
+    margin: 20px auto 0;
+    overflow: hidden;
+}
+
+.progress-bar {
+    height: 100%;
+    background: linear-gradient(90deg, #667eea, #764ba2);
+    width: 0%;
+    transition: width 0.3s ease;
+    border-radius: 3px;
+}
+
+/* 错误状态样式 */
+.page-placeholder.error {
+    background: rgba(255, 107, 107, 0.1);
+    border: 2px dashed rgba(255, 107, 107, 0.3);
+}
+
+.retry-btn {
+    padding: 10px 20px;
+    background: #667eea;
+    color: white;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 14px;
+    transition: background 0.3s ease;
+}
+
+.retry-btn:hover {
+    background: #5a67d8;
+}
+
+/* 优化加载动画 */
+.loading-pdf .placeholder-spinner {
+    border-top-color: #667eea;
+    animation: spin 0.8s linear infinite;
+}
+
+/* 响应式进度条 */
+@media (max-width: 768px) {
+    .loading-progress {
+        width: 150px;
+    }
+    
+    .placeholder-content p {
+        font-size: 14px;
+    }
+}
