@@ -7,7 +7,7 @@ class PDFViewer {
         this.totalPages = 0;
         this.swiper = null;
         this.scale = 1.5;
-        this.pdfUrl = 'https://github.com/DUT-2025-tuanxue/DUT-2025-tuanxue.github.io/blob/main/1.pdf';
+        this.pdfUrl = '1.pdf';
         this.renderedPages = new Set(); // 记录已渲染的页面
         this.renderingPages = new Set(); // 记录正在渲染的页面
         
@@ -16,28 +16,145 @@ class PDFViewer {
 
     async init() {
         try {
-            await this.loadPDF();
-            this.initSwiper();
-            this.bindEvents();
+            // 立即隐藏加载器并显示界面
             this.hideLoader();
+            this.showInitialUI();
+            
+            // 后台异步加载PDF
+            this.loadPDF();
         } catch (error) {
-            console.error('PDF加载失败:', error);
-            this.showError('PDF文件加载失败，请检查文件路径');
+            console.error('初始化失败:', error);
+            this.showError('初始化失败，请刷新页面重试');
         }
     }
 
+    showInitialUI() {
+        // 先显示一个临时占位符
+        this.createTemporarySlide();
+        this.initSwiper();
+        this.bindEvents();
+        
+        // 更新UI显示正在加载状态
+        document.getElementById('totalPages').textContent = '加载中...';
+        document.getElementById('currentPage').textContent = '1';
+    }
+
+    createTemporarySlide() {
+        const container = document.getElementById('pdfContainer');
+        const slide = document.createElement('div');
+        slide.className = 'swiper-slide';
+        slide.id = 'temp-slide';
+        
+        const pageDiv = document.createElement('div');
+        pageDiv.className = 'pdf-page';
+        
+        const placeholder = document.createElement('div');
+        placeholder.className = 'page-placeholder loading-pdf';
+        placeholder.innerHTML = `
+            <div class="placeholder-content">
+                <div class="placeholder-spinner"></div>
+                <p>正在连接PDF文件...</p>
+                <div class="loading-progress">
+                    <div class="progress-bar"></div>
+                </div>
+            </div>
+        `;
+        
+        pageDiv.appendChild(placeholder);
+        slide.appendChild(pageDiv);
+        container.appendChild(slide);
+    }
+
     async loadPDF() {
-        const loadingTask = pdfjsLib.getDocument(this.pdfUrl);
-        this.pdfDoc = await loadingTask.promise;
-        this.totalPages = this.pdfDoc.numPages;
+        try {
+            // 显示进度
+            this.updateLoadingProgress('正在下载PDF文件...', 10);
+            
+            const loadingTask = pdfjsLib.getDocument(this.pdfUrl);
+            
+            // 监听加载进度
+            loadingTask.onProgress = (progress) => {
+                if (progress.total > 0) {
+                    const percent = Math.round((progress.loaded / progress.total) * 60) + 10;
+                    this.updateLoadingProgress(`正在下载PDF文件... ${percent}%`, percent);
+                }
+            };
+            
+            this.pdfDoc = await loadingTask.promise;
+            this.totalPages = this.pdfDoc.numPages;
+            
+            this.updateLoadingProgress('PDF加载完成，正在准备页面...', 80);
+            
+            // 更新页面信息
+            document.getElementById('totalPages').textContent = this.totalPages;
+            document.getElementById('pageJumpInput').max = this.totalPages;
+            
+            // 移除临时占位符
+            const tempSlide = document.getElementById('temp-slide');
+            if (tempSlide) {
+                tempSlide.remove();
+            }
+            
+            // 创建所有页面的占位符
+            this.createAllSlides();
+            
+            // 重新初始化Swiper
+            this.swiper.destroy(true, true);
+            this.initSwiper();
+            
+            this.updateLoadingProgress('正在渲染第一页...', 90);
+            
+            // 渲染第一页
+            await this.renderPage(1);
+            
+            this.updateLoadingProgress('完成！', 100);
+            
+            // 预加载前几页
+            setTimeout(() => {
+                this.preloadAdjacentPages(1);
+            }, 500);
+            
+        } catch (error) {
+            console.error('PDF加载失败:', error);
+            this.showPDFError('PDF文件加载失败，请检查网络连接或文件路径');
+        }
+    }
+
+    updateLoadingProgress(message, percent) {
+        const placeholder = document.querySelector('.loading-pdf .placeholder-content');
+        if (placeholder) {
+            const progressText = placeholder.querySelector('p');
+            const progressBar = placeholder.querySelector('.progress-bar');
+            
+            if (progressText) progressText.textContent = message;
+            if (progressBar) progressBar.style.width = `${percent}%`;
+        }
+    }
+
+    showPDFError(message) {
+        const container = document.getElementById('pdfContainer');
+        container.innerHTML = `
+            <div class="swiper-slide">
+                <div class="pdf-page">
+                    <div class="page-placeholder error">
+                        <div class="placeholder-content">
+                            <div style="color: #ff6b6b; font-size: 48px; margin-bottom: 20px;">❌</div>
+                            <h3 style="color: #ff6b6b; margin-bottom: 15px;">加载失败</h3>
+                            <p style="margin-bottom: 20px;">${message}</p>
+                            <button onclick="location.reload()" class="retry-btn">
+                                重新加载
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
         
-        document.getElementById('totalPages').textContent = this.totalPages;
-        document.getElementById('pageJumpInput').max = this.totalPages;
-        
-        // 创建所有页面的占位符
-        this.createAllSlides();
-        // 只渲染第一页
-        await this.renderPage(1);
+        // 重新初始化Swiper
+        if (this.swiper) {
+            this.swiper.destroy(true, true);
+            this.initSwiper();
+        }
     }
 
     createAllSlides() {
@@ -114,16 +231,35 @@ class PDFViewer {
     }
 
     async preloadAdjacentPages(currentPage) {
-        // 预加载前后各2页
-        const pagesToLoad = [];
-        for (let i = Math.max(1, currentPage - 2); i <= Math.min(this.totalPages, currentPage + 2); i++) {
+        // 智能预加载：当前页前后各1页优先，然后扩展到前后各3页
+        const highPriorityPages = [];
+        const lowPriorityPages = [];
+        
+        // 高优先级：前后各1页
+        for (let i = Math.max(1, currentPage - 1); i <= Math.min(this.totalPages, currentPage + 1); i++) {
             if (!this.renderedPages.has(i) && !this.renderingPages.has(i)) {
-                pagesToLoad.push(i);
+                highPriorityPages.push(i);
             }
         }
         
-        // 并行加载这些页面
-        Promise.all(pagesToLoad.map(page => this.renderPage(page)));
+        // 低优先级：前后各3页（排除已在高优先级中的）
+        for (let i = Math.max(1, currentPage - 3); i <= Math.min(this.totalPages, currentPage + 3); i++) {
+            if (!this.renderedPages.has(i) && !this.renderingPages.has(i) && !highPriorityPages.includes(i)) {
+                lowPriorityPages.push(i);
+            }
+        }
+        
+        // 先加载高优先级页面
+        if (highPriorityPages.length > 0) {
+            await Promise.all(highPriorityPages.map(page => this.renderPage(page)));
+        }
+        
+        // 延迟加载低优先级页面，避免阻塞
+        if (lowPriorityPages.length > 0) {
+            setTimeout(() => {
+                lowPriorityPages.forEach(page => this.renderPage(page));
+            }, 1000);
+        }
     }
 
     async createThumbnail(page, pageNum) {
